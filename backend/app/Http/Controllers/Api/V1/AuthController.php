@@ -54,7 +54,7 @@ class AuthController extends Controller
         );
 
         return ApiResponse::success(
-            message: 'If an account exists for that email, a password reset link has been sent.'
+            message: 'If an account exists for that email, a password reset token has been sent.'
         );
     }
 

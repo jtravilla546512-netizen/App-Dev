@@ -30,7 +30,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
   };
 
   return (
-    <AuthShell title="Reset your password" subtitle="We will send instructions if the email belongs to an account.">
+    <AuthShell title="Reset your password" subtitle="We will email a reset token if the address belongs to an account.">
       <Input label="Email address" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
       <Button label="Send reset instructions" loading={loading} onPress={() => void submit()} />
       <Button label="I already have a reset token" variant="outline" onPress={() => navigation.navigate('ResetPassword', { email })} />

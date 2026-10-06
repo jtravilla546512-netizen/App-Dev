@@ -185,7 +185,7 @@ class AuthenticationTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath(
                 'message',
-                'If an account exists for that email, a password reset link has been sent.'
+                'If an account exists for that email, a password reset token has been sent.'
             );
     }
 

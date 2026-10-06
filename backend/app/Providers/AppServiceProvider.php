@@ -15,7 +15,9 @@ use App\Repositories\Contracts\UserRepositoryContract;
 use App\Repositories\LoanRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -39,6 +41,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // The Android client resets passwords with the token entry form, not a
+        // browser reset page. Laravel's default notification only exposes the
+        // token inside a web URL, so send the token visibly and give members
+        // the exact in-app steps needed to use it.
+        ResetPassword::toMailUsing(function (object $notifiable, string $token): MailMessage {
+            return (new MailMessage)
+                ->subject('Your RCJK Library password reset token')
+                ->greeting('Hello '.$notifiable->name.',')
+                ->line('A password reset was requested for your RCJK Library account.')
+                ->line('Your reset token is:')
+                ->line('**'.$token.'**')
+                ->line('Open the RCJK Library app, choose “I already have a reset token”, then enter this token with your new password.')
+                ->line('This token expires in 60 minutes. If you did not request a password reset, you can safely ignore this email.');
+        });
+
         RateLimiter::for('api', function (Request $request): Limit {
             return Limit::perMinute(60)->by(
                 $request->user()?->getAuthIdentifier() ?? $request->ip()
