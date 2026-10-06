@@ -5,9 +5,9 @@ namespace Tests\Feature\Api;
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -189,22 +189,48 @@ class AuthenticationTest extends TestCase
             );
     }
 
-    public function test_password_reset_mail_renders_with_the_configured_view_cache_path(): void
+    public function test_password_reset_email_is_sent_through_brevo_api(): void
     {
+        config([
+            'services.brevo.api_key' => 'test-brevo-key',
+            'services.brevo.sender_email' => 'library@example.com',
+            'services.brevo.sender_name' => 'RCJK Library',
+        ]);
+        Http::fake([
+            'api.brevo.com/v3/smtp/email' => Http::response(['messageId' => 'test-message-id'], 201),
+        ]);
+
         $user = User::factory()->create([
             'email' => 'member@example.com',
         ]);
 
-        $message = (new ResetPassword('test-reset-token'))->toMail($user);
-        $rendered = $message->render();
+        $this->postJson('/api/v1/auth/forgot-password', [
+            'email' => $user->email,
+        ])->assertOk();
 
-        $this->assertStringContainsString('A password reset was requested for your RCJK Library account.', $rendered);
-        $this->assertStringContainsString('test-reset-token', $rendered);
+        Http::assertSent(function ($request) use ($user): bool {
+            $payload = $request->data();
+
+            return $request->url() === 'https://api.brevo.com/v3/smtp/email'
+                && $request->hasHeader('api-key', 'test-brevo-key')
+                && $payload['sender']['email'] === 'library@example.com'
+                && $payload['to'][0]['email'] === $user->email
+                && $payload['subject'] === 'Your RCJK Library password reset token'
+                && str_contains($payload['textContent'], 'Your reset token is: ')
+                && str_contains($payload['htmlContent'], 'Your reset token is:');
+        });
     }
 
     public function test_user_can_reset_password_with_a_valid_token(): void
     {
-        Notification::fake();
+        config([
+            'services.brevo.api_key' => 'test-brevo-key',
+            'services.brevo.sender_email' => 'library@example.com',
+            'services.brevo.sender_name' => 'RCJK Library',
+        ]);
+        Http::fake([
+            'api.brevo.com/v3/smtp/email' => Http::response(['messageId' => 'test-message-id'], 201),
+        ]);
 
         $user = User::factory()->create([
             'email' => 'member@example.com',
@@ -219,15 +245,15 @@ class AuthenticationTest extends TestCase
 
         $token = null;
 
-        Notification::assertSentTo(
-            $user,
-            ResetPassword::class,
-            function (ResetPassword $notification) use (&$token): bool {
-                $token = $notification->token;
+        Http::assertSent(function ($request) use (&$token): bool {
+            $textContent = (string) $request->data()['textContent'];
+            preg_match('/Your reset token is: (.+)/', $textContent, $matches);
+            $token = $matches[1] ?? null;
 
-                return true;
-            }
-        );
+            return $token !== null;
+        });
+
+        $this->assertNotNull($token);
 
         $this->postJson('/api/v1/auth/reset-password', [
             'email' => $user->email,

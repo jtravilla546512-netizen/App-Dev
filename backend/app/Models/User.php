@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Services\BrevoTransactionalEmailService;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,15 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+
+    /**
+     * Send password-reset tokens through Brevo's HTTPS API. Railway's
+     * non-Pro plans cannot establish outbound SMTP connections.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        app(BrevoTransactionalEmailService::class)->sendPasswordReset($this, $token);
+    }
 
     /**
      * The attributes that are mass assignable.
