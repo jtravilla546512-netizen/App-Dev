@@ -27,6 +27,7 @@ class SendExpoPushNotification implements ShouldQueue
         public readonly string $title,
         public readonly string $body,
         public readonly array $data = [],
+        public readonly ?int $deviceId = null,
     ) {}
 
     public function handle(ExpoPushService $push): void
@@ -34,7 +35,7 @@ class SendExpoPushNotification implements ShouldQueue
         $user = User::query()->find($this->userId);
 
         if ($user !== null) {
-            $push->send($user, $this->preference, $this->title, $this->body, $this->data);
+            $push->send($user, $this->preference, $this->title, $this->body, $this->data, $this->deviceId);
         }
     }
 }

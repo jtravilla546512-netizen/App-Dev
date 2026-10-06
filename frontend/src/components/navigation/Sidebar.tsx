@@ -9,6 +9,7 @@ type Page = string
 
 const nav = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'circulation', label: 'Circulation desk', icon: BookOpen },
   {
     id: 'books', label: 'Book Management', icon: BookMarked, children: [
       { id: 'all-books', label: 'All Books', icon: BookCopy },

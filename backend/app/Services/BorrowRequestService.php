@@ -48,7 +48,8 @@ class BorrowRequestService
     public function create(int $bookId, User $user): BorrowRequest
     {
         return DB::transaction(function () use ($bookId, $user): BorrowRequest {
-            User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $user = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            app(BorrowingEligibilityService::class)->enforce($user);
             $book = Book::query()->with('category')->lockForUpdate()->findOrFail($bookId);
 
             if (! $book->is_active || ! $book->category?->is_active) {
@@ -125,6 +126,8 @@ class BorrowRequestService
         User $admin,
     ): BorrowRequest {
         return DB::transaction(function () use ($borrowRequest, $status, $attributes, $admin): BorrowRequest {
+            // Serialize all issuance for a member, even across different titles.
+            $member = User::query()->whereKey($borrowRequest->user_id)->lockForUpdate()->firstOrFail();
             $borrowRequest = $this->requests->lockForUpdate($borrowRequest);
 
             if ($borrowRequest->status !== BorrowRequestStatus::Pending) {
@@ -133,6 +136,7 @@ class BorrowRequestService
 
             $copy = null;
             if ($status === BorrowRequestStatus::Approved) {
+                app(BorrowingEligibilityService::class)->enforce($member);
                 $book = Book::query()->with('category')->lockForUpdate()->findOrFail($borrowRequest->book_id);
                 if (! $book->is_active || ! $book->category?->is_active) {
                     throw new DomainConflictException('This request cannot be approved because the catalog item is inactive.');

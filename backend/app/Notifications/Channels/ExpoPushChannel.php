@@ -22,6 +22,6 @@ class ExpoPushChannel
             $message['title'],
             $message['body'],
             $message['data'] ?? [],
-        );
+        )->afterCommit();
     }
 }

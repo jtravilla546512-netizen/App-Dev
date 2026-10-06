@@ -12,6 +12,7 @@ Route::prefix('v1')
         require __DIR__.'/api/v1/users.php';
         require __DIR__.'/api/v1/borrow-requests.php';
         require __DIR__.'/api/v1/loans.php';
+        require __DIR__.'/api/v1/circulation.php';
         require __DIR__.'/api/v1/notifications.php';
         require __DIR__.'/api/v1/operations.php';
     });

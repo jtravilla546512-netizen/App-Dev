@@ -18,6 +18,7 @@ export function BookDetailScreen({ route, navigation }: Props) {
   const book = useQuery({ queryKey: ['book', route.params.bookId], queryFn: () => catalogApi.book(route.params.bookId) });
   const memberRequests = useQuery({ queryKey: ['borrow-requests'], queryFn: libraryApi.requests });
   const memberLoans = useQuery({ queryKey: ['loans'], queryFn: libraryApi.loans });
+  const eligibility = useQuery({ queryKey: ['borrowing-eligibility'], queryFn: libraryApi.eligibility });
   const request = useMutation({
     mutationFn: () => libraryApi.createRequest(route.params.bookId),
     onSuccess: async (response) => {
@@ -43,7 +44,9 @@ export function BookDetailScreen({ route, navigation }: Props) {
   const hasActiveLoan = (memberLoans.data?.data ?? []).some(
     (entry) => entry.book_copy.book.id === item.id && entry.status !== 'returned',
   );
-  const unavailableReason = !item.is_active
+  const unavailableReason = eligibility.data?.data.can_borrow === false
+    ? eligibility.data.data.reason
+    : !item.is_active
     ? 'This title is archived and cannot be requested.'
     : item.available_copies === 0
       ? 'There are no available copies at the moment.'

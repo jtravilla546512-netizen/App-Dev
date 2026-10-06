@@ -1,12 +1,16 @@
 import * as SecureStore from 'expo-secure-store';
+import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { authApi } from '../api/services';
 import { ApiError, setApiToken, setUnauthorizedHandler } from '../api/client';
-import { unregisterCurrentDevice } from '../notifications/pushNotifications';
+import { startDeviceUnregistration } from '../notifications/pushNotifications';
 import type { User } from '../types/api';
+import { isSessionExpired } from './sessionPolicy';
+export { IDLE_LOGOUT_AFTER_MS } from './sessionPolicy';
 
 const TOKEN_KEY = 'library_access_token';
+export const LAST_ACTIVITY_KEY = 'library_last_activity_at';
 
 interface RegisterValues {
   name: string;
@@ -29,14 +33,20 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
 
   const clearSession = useCallback(async () => {
     setApiToken(null);
     setUser(null);
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-  }, []);
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await Promise.all([
+      SecureStore.deleteItemAsync(TOKEN_KEY),
+      SecureStore.deleteItemAsync(LAST_ACTIVITY_KEY),
+    ]);
+  }, [queryClient]);
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
@@ -50,6 +60,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const token = await SecureStore.getItemAsync(TOKEN_KEY);
         if (!token) return;
+
+        const storedActivity = Number(await SecureStore.getItemAsync(LAST_ACTIVITY_KEY));
+        if (isSessionExpired(storedActivity)) {
+          await clearSession();
+          return;
+        }
+
         setApiToken(token);
         const response = await authApi.me();
         if (response.data.role !== 'user') {
@@ -77,7 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       throw new ApiError('This Android app is for library members. Use the web panel for admin access.', 403);
     }
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    await Promise.all([
+      SecureStore.setItemAsync(TOKEN_KEY, token),
+      SecureStore.setItemAsync(LAST_ACTIVITY_KEY, String(Date.now())),
+    ]);
     setApiToken(token);
     setUser(nextUser);
   }, []);
@@ -96,14 +116,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [saveAuth]);
 
   const logout = useCallback(async () => {
-    try {
-      // A shared phone must not continue receiving the previous member's
-      // loan reminders after they intentionally sign out.
-      await unregisterCurrentDevice().catch(() => undefined);
-      await authApi.logout();
-    } finally {
-      await clearSession();
-    }
+    // Start authenticated requests before clearing the token, but never keep
+    // the protected UI visible while waiting for an offline network timeout.
+    setUser(null);
+    const unregister = await startDeviceUnregistration().catch(() => null);
+    const revoke = authApi.logout().catch(() => undefined);
+    await clearSession();
+    void Promise.all([unregister?.completion, revoke]);
   }, [clearSession]);
 
   const updateProfile = useCallback(async (name: string) => {

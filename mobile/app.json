@@ -2,7 +2,7 @@
   "expo": {
     "name": "RCJK Library",
     "slug": "pilipog-library",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "pilipoglibrary",
     "icon": "./assets/icon.png",
@@ -11,6 +11,7 @@
       "supportsTablet": true
     },
     "android": {
+      "versionCode": 2,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#C72C41",
@@ -33,11 +34,6 @@
         }
       ]
     ],
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#C72C41"
-    },
     "extra": {
       "eas": {
         "projectId": "aaf3758e-0518-4e1e-ac1f-9e1b026d3cb4"

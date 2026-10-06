@@ -11,7 +11,7 @@ class LoanDueSoonNotification extends Notification
 {
     use Queueable;
 
-    public function __construct(private readonly Loan $loan) {}
+    public function __construct(private readonly Loan $loan, private readonly bool $dueToday = false) {}
 
     public function via(object $notifiable): array
     {
@@ -21,10 +21,10 @@ class LoanDueSoonNotification extends Notification
     public function toDatabase(object $notifiable): array
     {
         return [
-            'type' => 'loan_due_soon',
+            'type' => $this->dueToday ? 'loan_due_today' : 'loan_due_soon',
             'loan_id' => $this->loan->id,
             'book_title' => $this->loan->bookCopy->book->title,
-            'title' => 'Book due soon',
+            'title' => $this->dueToday ? 'Book due today' : 'Book due soon',
             'message' => sprintf(
                 '"%s" is due on %s.',
                 $this->loan->bookCopy->book->title,
@@ -38,7 +38,7 @@ class LoanDueSoonNotification extends Notification
     {
         return [
             'preference' => 'due_soon_enabled',
-            'title' => 'Book due soon',
+            'title' => $this->dueToday ? 'Book due today' : 'Book due soon',
             'body' => sprintf('"%s" is due on %s.', $this->loan->bookCopy->book->title, $this->loan->due_at->format('M j, Y')),
             'data' => ['loan_id' => $this->loan->id],
         ];

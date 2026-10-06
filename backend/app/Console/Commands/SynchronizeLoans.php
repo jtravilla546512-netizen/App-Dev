@@ -15,7 +15,8 @@ class SynchronizeLoans extends Command
     {
         $overdue = $loans->synchronizeOverdue();
         $dueSoon = $loans->sendDueSoonNotifications();
-        $this->info("Synchronized {$overdue} overdue loan(s) and sent {$dueSoon} due-soon notification(s).");
+        $dueToday = $loans->sendDueTodayNotifications();
+        $this->info("Synchronized {$overdue} overdue loan(s), sent {$dueSoon} due-soon and {$dueToday} due-today notification(s).");
 
         return self::SUCCESS;
     }

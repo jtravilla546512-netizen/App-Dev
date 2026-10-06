@@ -31,6 +31,7 @@ function firstValidationError(errors: Record<string, string[]>): string | undefi
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<ApiEnvelope<T>> {
+  const requestToken = accessToken;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   const headers = new Headers(init.headers);
@@ -54,7 +55,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<ApiEnve
       | null;
 
     if (!response.ok || !payload?.success) {
-      if (response.status === 401) {
+      if (response.status === 401 && requestToken !== null && requestToken === accessToken) {
         unauthorizedHandler?.();
       }
 
@@ -74,8 +75,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<ApiEnve
     if (error instanceof Error && error.name === 'AbortError') {
       throw new ApiError('The server took too long to respond. Please try again.', 408);
     }
+    const networkDetail = error instanceof Error && error.message ? ` Details: ${error.message}` : '';
     throw new ApiError(
-      `Cannot reach the library server at ${API_URL}. Check Laravel and your network connection.`,
+      `Cannot reach the library server at ${API_URL}. Check Laravel and your network connection.${networkDetail}`,
       0,
     );
   } finally {

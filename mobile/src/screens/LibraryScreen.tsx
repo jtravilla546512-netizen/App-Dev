@@ -22,7 +22,8 @@ export function LibraryScreen({ route }: Props) {
   const [tab, setTab] = useState<Tab>('requests');
   const queryClient = useQueryClient();
   const requests = useQuery({ queryKey: ['borrow-requests'], queryFn: libraryApi.requests });
-  const loans = useQuery({ queryKey: ['loans'], queryFn: libraryApi.loans });
+  const loans = useQuery({ queryKey: ['loans'], queryFn: libraryApi.loans, refetchInterval: 30_000 });
+  const eligibility = useQuery({ queryKey: ['borrowing-eligibility'], queryFn: libraryApi.eligibility, refetchInterval: 30_000 });
   const cancel = useMutation({
     mutationFn: libraryApi.cancelRequest,
     onSuccess: async () => {
@@ -39,7 +40,7 @@ export function LibraryScreen({ route }: Props) {
   const historyRequests = (requests.data?.data ?? []).filter((item) => ['rejected', 'cancelled'].includes(item.status));
   const returned = (loans.data?.data ?? []).filter((item) => item.status === 'returned');
 
-  const refresh = async () => { await Promise.all([requests.refetch(), loans.refetch()]); };
+  const refresh = async () => { await Promise.all([requests.refetch(), loans.refetch(), eligibility.refetch()]); };
 
   useEffect(() => {
     if (route.params?.initialTab) setTab(route.params.initialTab);
@@ -48,6 +49,7 @@ export function LibraryScreen({ route }: Props) {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="My Library" subtitle="Requests, borrowed books, and history" />
+      {eligibility.data?.data.overdue_count ? <Text accessibilityRole="alert" style={{ padding: 16, color: colors.danger }}>{eligibility.data.data.reason}</Text> : null}
       <View style={styles.tabs}>
         {(['requests', 'borrowed', 'history'] as Tab[]).map((name) => (
           <Pressable key={name} style={[styles.tab, tab === name && styles.tabActive]} onPress={() => setTab(name)}>

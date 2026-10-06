@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import * as Notifications from 'expo-notifications';
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { notificationApi } from '../api/services';
-import { registerCurrentDevice } from '../notifications/pushNotifications';
+import { notificationApi, pushDeviceApi } from '../api/services';
+import { registerCurrentDevice, currentPushDeviceId } from '../notifications/pushNotifications';
 import { StateView } from '../components/StateView';
 import type { LibraryNotification } from '../types/api';
 import type { RootStackParamList } from '../navigation/types';
@@ -15,6 +17,34 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Notifications'>;
 
 export function NotificationsScreen({ navigation }: Props) {
   const queryClient = useQueryClient();
+  const [registering, setRegistering] = useState(false);
+  const [phoneReady, setPhoneReady] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const checkPush = async (send: boolean) => {
+    if (testing) return;
+    setTesting(true);
+    try {
+      const id = await currentPushDeviceId();
+      if (send) {
+        const result = await pushDeviceApi.test(id);
+        Alert.alert('Push test', result.message);
+      } else {
+        const { data } = await pushDeviceApi.diagnostics(id);
+        Alert.alert('Push delivery status', `Server enabled: ${data.server_enabled ? 'Yes' : 'No'}\nPhone registered: ${data.device_enabled ? 'Yes' : 'No'}\nLatest attempt: ${data.latest_attempt?.status ?? 'None — send a test'}\n${data.latest_attempt?.error_code ?? ''}\nProvider receipts can take 15–20 minutes. Provider acceptance does not guarantee display on your phone.`);
+      }
+    } catch (error) { Alert.alert('Push check failed', error instanceof Error ? error.message : 'Please try again.'); }
+    finally { setTesting(false); }
+  };
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const permission = await Notifications.getPermissionsAsync();
+      const id = await currentPushDeviceId();
+      const { data } = await pushDeviceApi.diagnostics(id);
+      if (!cancelled) setPhoneReady(permission.status === 'granted' && data.device_enabled);
+    })().catch(() => { if (!cancelled) setPhoneReady(false); });
+    return () => { cancelled = true; };
+  }, []);
   const notifications = useQuery({ queryKey: ['notifications'], queryFn: notificationApi.list });
   const preferences = useQuery({ queryKey: ['notification-preferences'], queryFn: notificationApi.preferences });
   const read = useMutation({
@@ -33,10 +63,14 @@ export function NotificationsScreen({ navigation }: Props) {
   });
 
   const setPushEnabled = async (enabled: boolean) => {
+    if (registering) return;
+    setRegistering(true);
+    try {
     if (enabled) {
       try {
         const registration = await registerCurrentDevice(true);
         if (registration.status !== 'ready') {
+          setPhoneReady(false);
           Alert.alert('Push notifications unavailable', registration.message);
           return;
         }
@@ -45,7 +79,9 @@ export function NotificationsScreen({ navigation }: Props) {
         return;
       }
     }
-    updatePreferences.mutate({ push_enabled: enabled });
+    await updatePreferences.mutateAsync({ push_enabled: enabled });
+    setPhoneReady(enabled);
+    } finally { setRegistering(false); }
   };
 
   const open = (item: LibraryNotification) => {
@@ -66,7 +102,7 @@ export function NotificationsScreen({ navigation }: Props) {
   const items = notifications.data?.data ?? [];
   const unread = notifications.data?.meta?.unread_count ?? 0;
   const settings = preferences.data?.data;
-  const isSavingSettings = updatePreferences.isPending || preferences.isLoading;
+  const isSavingSettings = registering || updatePreferences.isPending || preferences.isLoading;
   return (
     <View style={styles.screen}>
       <View style={styles.settingsCard}>
@@ -75,12 +111,18 @@ export function NotificationsScreen({ navigation }: Props) {
           <Text style={styles.settingsMessage}>Receive book due-date and library activity alerts on this phone.</Text>
         </View>
         <Switch
-          value={settings?.push_enabled ?? false}
-          onValueChange={(enabled) => void setPushEnabled(enabled)}
+          value={(settings?.push_enabled ?? false) && phoneReady}
+          onValueChange={(enabled) => void setPushEnabled(enabled).catch(() => undefined)}
           disabled={isSavingSettings}
           trackColor={{ false: colors.border, true: '#E9A5B0' }}
           thumbColor={settings?.push_enabled ? colors.primary : colors.white}
         />
+      </View>
+      {registering && <Text style={{ padding: 16 }}>Registering this phone for notifications…</Text>}
+      <Pressable disabled={isSavingSettings} onPress={() => void setPushEnabled(true).catch(() => undefined)} style={{ padding: 16 }}><Text style={{ color: colors.primary }}>Register / retry this phone</Text></Pressable>
+      <View style={{ flexDirection: 'row', gap: 16, paddingHorizontal: 16, paddingBottom: 8 }}>
+        <Pressable disabled={testing || isSavingSettings} onPress={() => void checkPush(true)}><Text style={{ color: colors.primary }}>Send test notification</Text></Pressable>
+        <Pressable disabled={testing || isSavingSettings} onPress={() => void checkPush(false)}><Text style={{ color: colors.primary }}>Check delivery status</Text></Pressable>
       </View>
       {settings?.push_enabled ? (
         <View style={styles.preferenceRows}>

@@ -1436,7 +1436,7 @@ Each phase ends with a working, demonstrable increment. Build the Laravel module
 
 ### Phase 10 — Smart circulation, member reminders, and session security (in progress)
 
-**Status:** QR labels and the optional Expo-push code path are implemented in source, but the new migrations are intentionally not yet applied or deployed. Web QR scanning, overdue-loan borrowing restrictions, and the ten-minute idle session timeout remain planned work.
+**Status (2026-10-06 source update):** QR identity, the web Circulation desk with camera/manual lookup and explicit borrow/return confirmation, overdue borrowing suspension, member idle-session enforcement, push-registration fixes, due-today reminders, and Expo delivery diagnostics are implemented in source. Local automated tests and an isolated browser borrow/return test pass. This is not a claim of live deployment or Android delivery: the new push-delivery migration, coordinated staging deploy, short-path APK rebuild, physical QR/push/idle tests and owner sign-off remain acceptance gates. See `docs/release/SMART_CIRCULATION_RELEASE.md`.
 
 **Goal:** Improve the existing request-and-return workflow with practical QR-assisted circulation, overdue enforcement, member reminders, and a ten-minute mobile idle timeout. These are improvements to the current two-role system, not new roles or public self-service borrowing.
 

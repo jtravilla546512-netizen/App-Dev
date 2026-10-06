@@ -22,6 +22,7 @@ export const authApi = {
     password_confirmation: string;
   }) => api.post<AuthPayload>('/auth/register', { ...body, device_name: 'android-app' }),
   me: () => api.get<User>('/auth/me'),
+  activity: () => api.post<null>('/auth/activity'),
   updateProfile: (name: string) => api.patch<User>('/auth/me', { name }),
   logout: () => api.post<null>('/auth/logout'),
   forgotPassword: (email: string) => api.post<null>('/auth/forgot-password', { email }),
@@ -52,6 +53,7 @@ export const catalogApi = {
 };
 
 export const libraryApi = {
+  eligibility: () => api.get<{ can_borrow: boolean; reason: string | null; overdue_count: number }>('/borrowing-eligibility'),
   requests: () => api.get<BorrowRequest[]>('/borrow-requests?per_page=100&direction=desc'),
   createRequest: (bookId: number) => api.post<BorrowRequest>('/borrow-requests', { book_id: bookId }),
   cancelRequest: (id: number) => api.patch<BorrowRequest>(`/borrow-requests/${id}/cancel`),
@@ -68,6 +70,8 @@ export const notificationApi = {
 };
 
 export const pushDeviceApi = {
+  test: (id: number) => api.post<null>(`/push-devices/${id}/test`),
+  diagnostics: (id: number) => api.get<{ server_enabled: boolean; device_enabled: boolean; latest_attempt: { status: string; error_code: string | null } | null }>(`/push-devices/${id}/diagnostics`),
   register: (body: { expo_push_token: string; platform: 'android' | 'ios' }) =>
     api.post<PushDevice>('/push-devices', body),
   unregister: (id: number) => api.delete<null>(`/push-devices/${id}`),

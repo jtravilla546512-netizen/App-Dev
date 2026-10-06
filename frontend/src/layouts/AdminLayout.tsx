@@ -12,9 +12,11 @@ import Users from '@/pages/Admin/Users'
 import Reports from '@/pages/Admin/Reports'
 import Notifications from '@/pages/Admin/Notifications'
 import Profile from '@/pages/Admin/Profile'
+import Circulation from '@/pages/Admin/Circulation'
 
 const pageRoutes: Record<string, string> = {
   dashboard: '/',
+  circulation: '/circulation',
   'all-books': '/books',
   'add-book': '/books/new',
   categories: '/categories',
@@ -53,6 +55,7 @@ export default function AdminLayout() {
         <main className="flex-1 overflow-y-auto">
           <Routes>
             <Route index element={<Dashboard onPage={onPage} />} />
+            <Route path="circulation" element={<Circulation />} />
             <Route path="books" element={<AllBooks />} />
             <Route path="books/new" element={<AddBook />} />
             <Route path="books/:bookId" element={<BookDetails />} />

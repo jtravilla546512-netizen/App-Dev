@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import Constants from 'expo-constants';
 
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/Button';
@@ -48,6 +49,7 @@ export function ProfileScreen(_: Props) {
     <View style={styles.screen}>
       <ScreenHeader title="My profile" subtitle="Manage your member account" />
       <ScrollView contentContainerStyle={styles.content}>
+        <Text style={{ color: colors.textMuted }}>App version {Constants.expoConfig?.version ?? 'unknown'} — build {Constants.expoConfig?.android?.versionCode ?? 'unknown'}</Text>
         <View style={styles.profileCard}>
           <View style={styles.avatar}><Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text></View>
           <View style={styles.profileInfo}>

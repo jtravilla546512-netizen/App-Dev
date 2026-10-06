@@ -39,7 +39,7 @@ class AuthService
             'status' => $status,
         ]);
 
-        $token = $user->createToken($attributes['device_name'] ?? 'api-client')->plainTextToken;
+        $token = $user->createToken($attributes['device_name'] ?? 'api-client', ['*'], now()->addMinutes(10))->plainTextToken;
 
         return compact('user', 'token');
     }
@@ -64,7 +64,7 @@ class AuthService
         }
 
         $user = $this->users->recordLogin($user);
-        $token = $user->createToken($deviceName)->plainTextToken;
+        $token = $user->createToken($deviceName, ['*'], $user->role === UserRole::User ? now()->addMinutes(10) : null)->plainTextToken;
 
         return compact('user', 'token');
     }

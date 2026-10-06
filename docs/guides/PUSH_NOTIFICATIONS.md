@@ -7,7 +7,7 @@ Android push messages are an additional reminder channel for:
 
 - a book checked out or returned;
 - a borrow request being reviewed;
-- a book due soon; and
+- a book due soon or due today; and
 - an overdue book.
 
 If permission is denied, the Expo service is unavailable, or the phone is
@@ -22,8 +22,14 @@ full borrowing history.
 3. Turn on **Push notifications** and accept Android's permission request.
 4. Optionally turn off due-date reminders or library activity alerts.
 
-Signing out unregisters that phone from the account. This prevents a shared
-device from receiving another member's reminders.
+Signing out attempts to unregister the phone. Offline or expired sessions can
+prevent that request, so verify shared-device behavior during acceptance tests.
+Register/retry after login associates the phone with the current member.
+
+Use **Register / retry this phone**, **Send test notification**, and **Check
+delivery status** to diagnose setup. Android notification permission alone does
+not prove that Firebase obtained a token or that the API registered the device.
+The app creates the `library-reminders` Android channel before requesting a token.
 
 ## Developer and staging setup
 
@@ -49,6 +55,7 @@ device from receiving another member's reminders.
    ```dotenv
    QUEUE_CONNECTION=database
    EXPO_PUSH_NOTIFICATIONS_ENABLED=true
+   LIBRARY_DUE_SOON_DAYS=3
    ```
 
 5. Run both `php artisan schedule:work` and
@@ -62,8 +69,15 @@ still the deployment provider's responsibility.
 
 - `library:sync-loans` runs every 15 minutes.
 - The first due-soon alert for each loan is recorded only once.
+- The due-today alert is a separate once-only event.
 - The first overdue alert for each loan is recorded only once.
 - Invalid Expo tokens reported as `DeviceNotRegistered` are disabled
   automatically.
 - The app re-registers a previously permitted device after login without
   showing another permission dialog.
+- `library:push-receipts` runs every five minutes and checks tickets at least
+  15 minutes old. The `push_delivery_attempts` migration must run first.
+- `accepted` means Expo accepted the request; `provider_accepted` means FCM/APNs
+  accepted it, not proof that the phone displayed it. Verify on the device.
+- Delivery attempt metadata is removed after 30 days; no private keys or push
+  tokens are exposed by the member diagnostics endpoint.

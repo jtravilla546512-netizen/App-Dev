@@ -5,6 +5,7 @@ import { useMarkAllNotificationsRead, useNotifications } from '@/hooks/useNotifi
 
 const pageTitles: Record<string, string> = {
   dashboard: 'Dashboard',
+  circulation: 'Circulation desk',
   'all-books': 'All Books',
   'add-book': 'Add Book',
   'book-details': 'Book Details',

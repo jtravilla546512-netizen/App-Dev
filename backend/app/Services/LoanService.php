@@ -109,23 +109,44 @@ class LoanService
 
     public function sendDueSoonNotifications(): int
     {
+        return $this->sendReminders(false);
+    }
+
+    public function sendDueTodayNotifications(): int
+    {
+        return $this->sendReminders(true);
+    }
+
+    private function sendReminders(bool $dueToday): int
+    {
         $loans = Loan::query()
             ->with('user', 'bookCopy.book')
             ->where('status', LoanStatus::Borrowed->value)
             ->whereNull('returned_at')
             ->whereBetween('due_at', [now(), now()->addDays((int) config('library.due_soon_days'))])
+            ->when($dueToday, fn ($query) => $query->whereDate('due_at', today()), fn ($query) => $query->whereDate('due_at', '>', today()))
             ->get();
         $sent = 0;
 
         foreach ($loans as $loan) {
-            $alreadySent = $loan->user->notifications()
-                ->where('type', LoanDueSoonNotification::class)
-                ->where('data->loan_id', $loan->id)
-                ->exists();
-            if (! $alreadySent) {
-                $loan->user->notify(new LoanDueSoonNotification($loan));
-                $sent++;
-            }
+            $sent += DB::transaction(function () use ($loan, $dueToday): int {
+                $loan = Loan::query()->with('user', 'bookCopy.book')->lockForUpdate()->findOrFail($loan->id);
+                if ($loan->returned_at !== null || $loan->due_at->isPast()) {
+                    return 0;
+                }
+                $alreadySent = $loan->user->notifications()
+                    ->where('type', LoanDueSoonNotification::class)
+                    ->where('data->loan_id', $loan->id)
+                    ->when($dueToday, fn ($query) => $query->where('data->type', 'loan_due_today'), fn ($query) => $query->where('data->type', 'loan_due_soon'))
+                    ->exists();
+                if (! $alreadySent) {
+                    $loan->user->notify(new LoanDueSoonNotification($loan, $dueToday));
+
+                    return 1;
+                }
+
+                return 0;
+            });
         }
 
         return $sent;

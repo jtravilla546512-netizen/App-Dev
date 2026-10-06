@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Enums\UserRole;
+use App\Models\User;
 use App\Repositories\BookCopyRepository;
 use App\Repositories\BookRepository;
 use App\Repositories\BorrowRequestRepository;
@@ -18,6 +20,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -39,6 +42,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Sanctum::authenticateAccessTokensUsing(function ($token, bool $valid): bool {
+            if ($token->tokenable instanceof User && $token->tokenable->role === UserRole::User) {
+                // Legacy member tokens must not retain an unlimited session.
+                // Polling must not extend expiry: only the activity endpoint does.
+                $expiry = $token->expires_at ?? $token->created_at->copy()->addMinutes(10);
+                if ($expiry->lessThanOrEqualTo(now())) {
+                    $token->delete();
+
+                    return false;
+                }
+            }
+
+            return $valid;
+        });
+
         RateLimiter::for('api', function (Request $request): Limit {
             return Limit::perMinute(60)->by(
                 $request->user()?->getAuthIdentifier() ?? $request->ip()

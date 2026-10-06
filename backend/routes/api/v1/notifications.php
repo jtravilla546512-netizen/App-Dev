@@ -12,5 +12,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
     Route::get('/notification-preferences', [PushNotificationController::class, 'preferences'])->name('notification-preferences.show');
     Route::patch('/notification-preferences', [PushNotificationController::class, 'updatePreferences'])->name('notification-preferences.update');
     Route::post('/push-devices', [PushNotificationController::class, 'register'])->name('push-devices.register');
+    Route::get('/push-devices/{pushDevice}/diagnostics', [PushNotificationController::class, 'diagnostics']);
+    Route::post('/push-devices/{pushDevice}/test', [PushNotificationController::class, 'test'])->middleware('throttle:1,1');
     Route::delete('/push-devices/{pushDevice}', [PushNotificationController::class, 'destroy'])->name('push-devices.destroy');
 });

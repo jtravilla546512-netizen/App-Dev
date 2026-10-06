@@ -9,15 +9,16 @@ Do not use local XAMPP data, local `.env` files, production user data, or the te
 Run these commands from the repository root. Railway can only deploy commits that are already on GitHub.
 
 ```powershell
-git push origin main
-git push -u origin staging
+git push deployment HEAD:staging
 ```
 
-In GitHub, confirm that the `staging` branch contains the intended commit before continuing.
+The `deployment` remote is the deployment fork, `jtravilla546512-netizen/App-Dev`. Confirm it with `git remote -v`. Do not force-push: fetch and review any remote changes if rejected. In GitHub, confirm that the fork's `staging` branch contains the intended commit before continuing. Railway and Cloudflare must both track that branch for automatic deployment.
+
+For the current feature rollout, follow [Smart circulation release](SMART_CIRCULATION_RELEASE.md). The setup below also covers creating a fresh environment; do not recreate the existing database or rerun initial seeding for ordinary updates.
 
 ## 2. Create the Railway project and database
 
-1. Sign in at [Railway](https://railway.app/) and link the GitHub account that owns `Secretus1204/App-Dev`.
+1. Sign in at [Railway](https://railway.app/) and link the GitHub account that owns the deployment fork `jtravilla546512-netizen/App-Dev`.
 2. Select **New Project** > **Empty Project** and name it `rcjk-library-staging`.
 3. Select **+ New** > **Database** > **MySQL**. Keep it private; the API service will use Railway's internal network to reach it.
 4. Rename the database service to `MySQL`. The variable references below assume that service name.
@@ -25,13 +26,15 @@ In GitHub, confirm that the `staging` branch contains the intended commit before
 ## 3. Deploy the Laravel API
 
 1. Select **+ New** > **Empty Service** and name it `api`.
-2. In its **Settings**, connect `Secretus1204/App-Dev`, choose the `staging` branch, and set **Root Directory** to `/backend`.
+2. In its **Settings**, connect `jtravilla546512-netizen/App-Dev`, choose the `staging` branch, and set **Root Directory** to `/backend`.
 3. Set the watch path to `/backend/**` so frontend-only commits do not redeploy the API.
 4. Set the **Pre-Deploy Command** below. It is safe only for this fresh staging environment: it runs migrations, creates the controlled first Admin, and adds the repeat-safe 20-book demonstration catalog.
 
 ```sh
 php artisan migrate --force && php artisan db:seed --force && php artisan db:seed --class=DemoCatalogSeeder --force
 ```
+
+After the initial setup, use only `php artisan migrate --force` as the API pre-deploy command. Keep worker/scheduler rollout coordinated with migrations; they must not start using new tables before migration succeeds.
 
 5. In **Variables** > **Raw Editor**, add these values. Generate `APP_KEY` locally with `php artisan key:generate --show` from `backend/`, then paste the output into Railway only. Use a new strong staging password for the first Admin; never commit it.
 
