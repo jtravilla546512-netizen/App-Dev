@@ -189,6 +189,19 @@ class AuthenticationTest extends TestCase
             );
     }
 
+    public function test_password_reset_mail_renders_with_the_configured_view_cache_path(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'member@example.com',
+        ]);
+
+        $message = (new ResetPassword('test-reset-token'))->toMail($user);
+        $rendered = $message->render();
+
+        $this->assertStringContainsString('A password reset was requested for your RCJK Library account.', $rendered);
+        $this->assertStringContainsString('test-reset-token', $rendered);
+    }
+
     public function test_user_can_reset_password_with_a_valid_token(): void
     {
         Notification::fake();

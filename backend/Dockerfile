@@ -21,6 +21,11 @@ RUN docker-php-ext-install pdo_mysql
 COPY --from=dependencies /app/vendor ./vendor
 COPY . .
 
+# The Docker build context excludes Laravel's ignored runtime view-cache
+# directory. Create it in the image so Blade can render Markdown mail such as
+# password-reset notifications in a clean Railway deployment.
+RUN mkdir -p storage/framework/views
+
 # Generate Laravel's package-discovery cache without requiring production secrets
 # while the image is being built.
 RUN php artisan package:discover --ansi
