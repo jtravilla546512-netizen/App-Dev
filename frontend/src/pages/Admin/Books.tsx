@@ -81,26 +81,26 @@ export function AllBooks() {
       {error && <div role="alert" className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">{error}</div>}
 
       <div className="bg-white rounded-xl border border-[#D9D9D9] shadow-sm">
-        <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-[#D9D9D9]">
-          <div className="flex items-center gap-2 bg-[#F5F5F5] border border-[#D9D9D9] rounded-lg px-3 py-2 flex-1 min-w-48">
+        <div className="flex flex-col gap-3 px-5 py-4 border-b border-[#D9D9D9] sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex min-w-0 w-full items-center gap-2 rounded-lg border border-[#D9D9D9] bg-[#F5F5F5] px-3 py-2 sm:min-w-52 sm:flex-1">
             <Search size={14} className="text-gray-400 shrink-0" />
             <input value={search} onChange={(event) => updateSearch(event.target.value)} className="bg-transparent text-sm outline-none w-full placeholder:text-gray-400" placeholder="Search title, author, or ISBN..." />
           </div>
-          <select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(1) }} className="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white outline-none">
+          <select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(1) }} className="w-full shrink-0 rounded-lg border border-[#D9D9D9] bg-white px-3 py-2 text-sm outline-none sm:w-auto">
             <option value="">All categories</option>
             {(categoriesQuery.data ?? []).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select>
-          <select value={availability} onChange={(event) => { setAvailability(event.target.value); setPage(1) }} className="border border-[#D9D9D9] rounded-lg px-3 py-2 text-sm bg-white outline-none">
+          <select value={availability} onChange={(event) => { setAvailability(event.target.value); setPage(1) }} className="w-full shrink-0 rounded-lg border border-[#D9D9D9] bg-white px-3 py-2 text-sm outline-none sm:w-auto">
             <option value="">All availability</option>
             <option value="available">Available</option>
             <option value="limited">Limited</option>
             <option value="unavailable">Unavailable</option>
           </select>
-          <label className="flex items-center gap-2 text-xs text-gray-600 whitespace-nowrap">
+          <label className="flex shrink-0 items-center gap-2 text-xs text-gray-600 whitespace-nowrap">
             <input type="checkbox" checked={includeArchived} onChange={(event) => { setIncludeArchived(event.target.checked); setPage(1) }} className="accent-[#C72C41]" />
             Include archived
           </label>
-          <button onClick={() => navigate('/books/new')} className="flex items-center gap-2 bg-[#C72C41] hover:bg-[#A50034] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors ml-auto">
+          <button onClick={() => navigate('/books/new')} className="flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[#C72C41] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#A50034] sm:ml-auto sm:w-auto">
             <Plus size={15} /> Add Book
           </button>
         </div>
